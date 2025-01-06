@@ -1,0 +1,6 @@
+nltk
+scikit-learn
+pandas
+python-dotenv
+confluent-kafka
+hopsworks
