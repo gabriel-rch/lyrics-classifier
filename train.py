@@ -3,21 +3,47 @@ import re
 import hopsworks
 import dotenv
 import os
-import matplotlib.pyplot as plt
-import seaborn as sns
+import pandas as pd
+import wandb
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    confusion_matrix,
-    accuracy_score,
-    matthews_corrcoef,
-    classification_report
-)
+from sklearn.metrics import accuracy_score, matthews_corrcoef
 
 dotenv.load_dotenv()
+
+nltk.download("stopwords")
+stopwords = nltk.corpus.stopwords.words("portuguese")
+
+sweep_config = {
+    "method": "random",  # Random search for hyperparameter tuning
+    "metric": {
+        "name": "accuracy",  # Evaluation metric to optimize
+        "goal": "maximize",  # Maximize the accuracy
+    },
+    "parameters": {
+        "solver": {
+            "values": ["lbfgs", "newton-cg", "sag", "saga"]  # Solvers for Logistic Regression
+        },
+        "C": {
+            "distribution": "log_uniform",  # Regularization strength
+            "min": 1e-2,
+            "max": 2,
+        },
+        "class_weight": {
+            "values": ["balanced", None]  # Class weights
+        },
+    },
+}
+
+project = hopsworks.login(api_key_value=os.environ.get("HOPSWORKS_KEY"))
+fs = project.get_feature_store(name="portuguese_lyrics_featurestore")
+
+data = fs.get_feature_group("lyrics").read()
+X, y = data["lyrics"], data["genre"]
 
 
 class TextPreprocessor(BaseEstimator, TransformerMixin):
@@ -37,47 +63,58 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
         return " ".join([word for word in text.lower().split() if word not in self.stopwords])
 
 
-def get_training_data():
-    project = hopsworks.login(api_key_value=os.environ.get("HOPSWORKS_KEY"))
-    fs = project.get_feature_store(name="portuguese_lyrics_featurestore")
-    return fs.get_feature_group("lyrics").read()
+def train(config=None):
+    with wandb.init(config=config):
+        config = wandb.config
+
+        pipeline = Pipeline(
+            [
+                ("preprocess", TextPreprocessor(stopwords=stopwords)),
+                ("tfidf", TfidfVectorizer(max_features=5000)),
+                (
+                    "model",
+                    LogisticRegression(
+                        solver=config.solver,
+                        C=config.C,
+                        class_weight=config.class_weight,
+                    ),
+                ),
+            ]
+        )
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1337)
+        pipeline.fit(X_train, y_train)
+
+        y_pred = pipeline.predict(X_test)
+
+        wandb.log({"accuracy": accuracy_score(y_test, y_pred)})
+        wandb.log({"mcc": matthews_corrcoef(y_test, y_pred)})
+
+        le = LabelEncoder().fit(y.unique())
+
+        cm = wandb.plot.confusion_matrix(
+            y_true=le.transform(y_test),
+            preds= le.transform(y_pred),
+            class_names=y.unique(),
+        )
+
+        wandb.log({"confusion_matrix": cm})
 
 
-def main():
-    nltk.download("stopwords")
-    stopwords = nltk.corpus.stopwords.words("portuguese")
+wandb.login(key=os.environ.get("WANDB_KEY"))
+sweep_id = wandb.sweep(sweep_config, project="lyrics-classifier")
+wandb.agent(sweep_id, train, count=5)
 
-    pipeline = Pipeline(
-        [
-            ("preprocess", TextPreprocessor(stopwords=stopwords)),
-            ("tfidf", TfidfVectorizer(max_features=5000)),
-            ("model", LogisticRegression(class_weight="balanced")),
-        ]
-    )
+api = wandb.Api()
+sweep = api.sweep(sweep_id)
 
-    data = get_training_data()
-    X, y = data["lyrics"], data["genre"]
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1337)
-    pipeline.fit(X_train, y_train)
-
-    y_pred = pipeline.predict(X_test)
-
-    accuracy = accuracy_score(y_test, y_pred)
-    mcc = matthews_corrcoef(y_test, y_pred)
-    report = classification_report(y_test, y_pred)
-
-    with open("results/metrics.txt", "w") as f:
-        f.write(f"Accuracy: {accuracy:.2f}\n")
-        f.write(f"MCC: {mcc:.2f}\n")
-        f.write(report)
-    
-    cm = confusion_matrix(y_test, y_pred)
-    plt.figure(figsize=(12, 12))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=y.unique(), yticklabels=y.unique())
-    plt.savefig("results/confusion_matrix.png", dpi=300)
-    plt.close()
+best_run = sweep.best_run()
+best_config = best_run.config
 
 
-if __name__ == "__main__":
-    main()
+wandb.finish()
+
+# with open("results/metrics.txt", "w") as f:
+#     f.write(f"Accuracy: {accuracy:.2f}\n")
+#     f.write(f"MCC: {mcc:.2f}\n")
+#     f.write(report)
