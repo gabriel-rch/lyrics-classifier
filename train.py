@@ -1,10 +1,10 @@
 import nltk
-import re
 import hopsworks
 import dotenv
 import os
-import pandas as pd
 import wandb
+import re
+from unidecode import unidecode
 from sklearn.pipeline import Pipeline
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -25,6 +25,11 @@ sweep_config = {
         "goal": "maximize",  # Maximize the accuracy
     },
     "parameters": {
+        "max_features": {
+            "distribution": "int_uniform",  # Number of features to use
+            "min": 5000,
+            "max": 20000,
+        },
         "solver": {
             "values": ["lbfgs", "newton-cg", "sag", "saga"]  # Solvers for Logistic Regression
         },
@@ -56,11 +61,15 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
     def transform(self, X):
         return [self.clean_text(text) for text in X]
 
-    def clean_text(self, text):
-        # Remove special characters
-        text = re.sub(r"[^a-zA-Z\s]", "", text)
+    def clean_text(self, text: str):
+        # To lowercase
+        text = text.lower()
+        # Normalize
+        text = unidecode(text)
+        # Remove ponctuation
+        text = re.sub(r'[^\w\s]', '', text)
         # Remove stopwords
-        return " ".join([word for word in text.lower().split() if word not in self.stopwords])
+        return " ".join([word for word in text.split() if word not in self.stopwords])
 
 
 def train(config=None):
@@ -70,7 +79,7 @@ def train(config=None):
         pipeline = Pipeline(
             [
                 ("preprocess", TextPreprocessor(stopwords=stopwords)),
-                ("tfidf", TfidfVectorizer(max_features=5000)),
+                ("tfidf", TfidfVectorizer(max_features=config.max_features)),
                 (
                     "model",
                     LogisticRegression(
@@ -110,7 +119,6 @@ sweep = api.sweep(sweep_id)
 
 best_run = sweep.best_run()
 best_config = best_run.config
-
 
 wandb.finish()
 
