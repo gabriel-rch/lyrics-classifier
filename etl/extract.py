@@ -1,92 +1,76 @@
-import requests
-import bs4
-import re
+import letras
+import vagalume
 import json
+import argparse
+import time
 from tqdm import tqdm
 
 
-GENRE_LIST = [
-    "Country",
-    "Forró",
-    "Funk",
-    "Gospel/Religioso",
-    "Heavy Metal",
-    "Hip Hop/Rap",
-    "K-Pop",
-    "MPB",
-    "Pagode",
-    "Pop",
-    "Rock",
-    "R&B",
-    "Reggaeton",
-    "Samba",
-    "Sertanejo",
-]
-
-SONG_LIMIT = 100
+def log(level, message):
+    print(f"[{level}] {time.strftime('%H:%M:%S', time.localtime())} {message}")
 
 
-def get_songs_by_genre(genre):
-    response = requests.get(f"https://www.letras.mus.br/mais-acessadas/{genre['url']}")
-    soup = bs4.BeautifulSoup(response.text, "html.parser")
-
-    songs_info = soup.find("ol", class_="top-list_mus --top")
-    songs = [
-        {
-            "title": song.find("a")["title"],
-            "artist": song.find("a").find("span").text,
-            "genre": genre["genre"],
-            "link": song.find("a")["href"],
-        }
-        for song in songs_info.find_all("li", limit=SONG_LIMIT)
-    ]
-
-    return songs
+def get_songs(genre, limit, source):
+    log("INFO", f"Getting songs from {genre} at {source}")
+    if source == "letras":
+        return letras.get_songs(genre, limit)
+    elif source == "vagalume":
+        return vagalume.get_songs(genre, limit)
+    else:
+        log("ERROR", f"Invalid source: {source}")
 
 
-def get_lyrics(song):
-    try:
-        response = requests.get(
-            f"https://www.letras.mus.br{song['link']}traducao.html", cookies={"translMode": "single"}
-        )
-    except Exception as e:
-        print(f"Failed to get lyrics for {song['title']} by {song['artist']}: {e}")
-        return None
+def get_lyrics(song, source):
+    if source == "letras":
+        return letras.get_lyrics(song)
+    elif source == "vagalume":
+        return vagalume.get_lyrics(song)
+    else:
+        log("ERROR", f"Invalid source: {source}")
 
-    soup = bs4.BeautifulSoup(response.text, "html.parser")
 
-    translated_lyrics = soup.find("div", class_="translation-single")
-    original_lyrics = soup.find("div", class_="lyric-original")
-    lyrics = translated_lyrics or original_lyrics
-    if not lyrics:
-        return None
-
-    verses = [
-        " ".join([line.strip() for line in p.get_text(separator="\n").split("\n") if line.strip()])
-        for p in lyrics.find_all("p")
-    ]
-
-    return " ".join(verses)
+def arg_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--source", type=str, default="letras", help="Source to get songs and lyrics from"
+    )
+    parser.add_argument("--limit", type=int, default=100, help="Number of songs to get from each genre")
+    return parser.parse_args()
 
 
 def main():
-    response = requests.get("https://www.letras.mus.br/estilos/")
-    soup = bs4.BeautifulSoup(response.text, "html.parser")
-
-    all_genres = soup.find("ul", class_=re.compile("^cnt-list"))
-
     genres = [
-        {"genre": genre.find("a").text, "url": genre.find("a")["href"].split("/")[-2]}
-        for genre in all_genres.find_all("li")
-        if genre.find("a").text in GENRE_LIST
+        "Country",
+        "Forró",
+        "Funk",
+        "Gospel",
+        "Heavy Metal",
+        "Hip Hop",
+        "K-Pop",
+        "MPB",
+        "Pagode",
+        "Pop",
+        "Rock",
+        "R&B",
+        "Reggaeton",
+        "Samba",
+        "Sertanejo",
     ]
 
-    songs = [song for genre in genres for song in get_songs_by_genre(genre)]
-    lyrics = []
-    for song in tqdm(songs):
-        lyrics.append({**song, "lyrics": get_lyrics(song)})
+    args = arg_parser()
 
-    json.dump(lyrics, open("raw/letras.json", "w", encoding="utf8"), ensure_ascii=False)
+    if args.source not in ["letras", "vagalume"]:
+        raise ValueError(f"Invalid source: {args.source}")
+
+    if args.limit < 1:
+        raise ValueError("Limit must be at least 1")
+
+    songs = [song for genre in genres for song in get_songs(genre, args.limit, args.source)]
+    lyrics = []
+    for song in tqdm(songs, desc="Getting lyrics", unit="song"):
+        lyrics.append({**song, "lyrics": get_lyrics(song, args.source)})
+
+    json.dump(lyrics, open(f"raw/{args.source}.json", "w", encoding="utf8"), ensure_ascii=False)
 
 
 if __name__ == "__main__":
