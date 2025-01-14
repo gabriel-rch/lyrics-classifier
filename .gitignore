@@ -3,3 +3,4 @@ raw
 data
 wandb
 __pycache__
+*.json

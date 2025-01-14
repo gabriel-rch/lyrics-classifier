@@ -16,7 +16,7 @@ feature_group = fs.create_feature_group(
     online_enabled=True,
 )
 
-df = pd.read_csv("data/lyrics.csv")
+df = pd.read_csv("lyrics.csv")
 df["id"] = df.index
 
 feature_group.insert(df)

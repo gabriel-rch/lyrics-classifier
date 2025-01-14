@@ -70,7 +70,7 @@ def main():
     for song in tqdm(songs, desc="Getting lyrics", unit="song"):
         lyrics.append({**song, "lyrics": get_lyrics(song, args.source)})
 
-    json.dump(lyrics, open(f"raw/{args.source}.json", "w", encoding="utf8"), ensure_ascii=False)
+    json.dump(lyrics, open(f"{args.source}.json", "w", encoding="utf8"), ensure_ascii=False)
 
 
 if __name__ == "__main__":
