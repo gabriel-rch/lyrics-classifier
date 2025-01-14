@@ -11,12 +11,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: actions/setup-python@v5.3.0
-        with:
-          python-version: 3.8
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
+        uses: ./.github/actions/setup.yml
       - name: run the extraction script
         run: python etl/extract.py --source letras
       - name: cache data
@@ -32,12 +27,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: actions/setup-python@v5.3.0
-        with:
-          python-version: 3.8
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
+        uses: ./.github/actions/setup.yml
       - name: run the extraction script
         run: python etl/extract.py --source vagalume
       - name: cache data
@@ -54,12 +44,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: actions/setup-python@v5.3.0
-        with:
-          python-version: 3.8
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
+        uses: ./.github/actions/setup.yml
       - name: restore extracted data from Letras
         uses: actions/cache@v4.2.0
         with:
@@ -90,13 +75,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: actions/setup-python@v5.3.0
-        with:
-          python-version: 3.8
-          run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-            - name: cache structured data
+        uses: ./.github/actions/setup.yml
       - name: recover structured data
         uses: actions/cache@v4.2.0
         with:
