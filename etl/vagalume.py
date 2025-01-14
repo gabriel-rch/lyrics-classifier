@@ -1,6 +1,8 @@
 import requests
 import bs4
 import random
+import time
+
 
 GENRE_URL = {
     "Country": "browse/style/country.html",
@@ -21,10 +23,26 @@ GENRE_URL = {
 }
 
 
-def get_songs(genre: str, limit: int):
-    response = requests.get(f"https://www.vagalume.com.br/{GENRE_URL[genre]}")
-    response.encoding = "utf-8"
+def make_request(url: str):
+    tries = 0
 
+    while True:
+        try:
+            response = requests.get(url)
+            response.encoding = "utf-8"
+            return response
+        except Exception:
+            time.sleep(5)
+
+            tries += 1
+            if tries == 5:
+                raise Exception("Failed to make request")
+
+            continue
+
+
+def get_songs(genre: str, limit: int):
+    response = make_request(f"https://www.vagalume.com.br/{GENRE_URL[genre]}")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
     container = soup.find("div", class_="moreNamesContainer")
@@ -44,9 +62,8 @@ def get_songs(genre: str, limit: int):
             )
 
         for artist in artists:
-            response = requests.get(f"https://www.vagalume.com.br{artist['link']}")
-            response.encoding = "utf-8"
-
+            time.sleep(1)  # Avoid being blocked
+            response = make_request(f"https://www.vagalume.com.br{artist['link']}")
             soup = bs4.BeautifulSoup(response.text, "html.parser")
 
             current_songs = []
@@ -106,16 +123,12 @@ def get_lyrics(song: dict):
     original = f"https://www.vagalume.com.br{song['link']}"
     translated = original.replace(".html", "-traducao.html")
 
-    response = requests.get(translated)
-    response.encoding = "utf-8"
-
+    response = make_request(translated)
     if response.status_code == 404:
         # Song has no translation or is already in Portuguese
         # non-Portuguese songs may integrate the database right now,
         # but these songs are removed in the next step
-        response = requests.get(original)
-        response.encoding = "utf-8"
-
+        response = make_request(original)
         soup = bs4.BeautifulSoup(response.text, "html.parser")
         return soup.find("div", id="lyrics").get_text(separator=" ")
 
@@ -136,5 +149,5 @@ def get_lyrics(song: dict):
                     ]
                 )
                 for block in translated_block
-            ][1:]
+            ][1:] # Exclude song title
         )
