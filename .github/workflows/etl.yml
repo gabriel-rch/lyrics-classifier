@@ -11,7 +11,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: ./.github/actions/setup.yml
+        uses: ./.github/actions/python-setup
       - name: run the extraction script
         run: python etl/extract.py --source letras
       - name: cache data
@@ -27,7 +27,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: ./.github/actions/setup.yml
+        uses: ./.github/actions/python-setup
       - name: run the extraction script
         run: python etl/extract.py --source vagalume
       - name: cache data
@@ -44,7 +44,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: ./.github/actions/setup.yml
+        uses: ./.github/actions/python-setup
       - name: restore extracted data from Letras
         uses: actions/cache@v4.2.0
         with:
@@ -75,7 +75,7 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@v4.2.2
       - name: setup the python environment
-        uses: ./.github/actions/setup.yml
+        uses: ./.github/actions/python-setup
       - name: recover structured data
         uses: actions/cache@v4.2.0
         with:
