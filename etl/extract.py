@@ -3,7 +3,6 @@ import vagalume
 import json
 import argparse
 import time
-from tqdm import tqdm
 
 
 def log(level, message):
