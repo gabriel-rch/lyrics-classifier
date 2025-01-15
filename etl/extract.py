@@ -66,8 +66,10 @@ def main():
         raise ValueError("Limit must be at least 1")
 
     songs = [song for genre in genres for song in get_songs(genre, args.limit, args.source)]
+    total = len(songs)
     lyrics = []
-    for song in tqdm(songs, desc="Getting lyrics", unit="song"):
+    for index, song in enumerate(songs):
+        log("INFO", f"({index + 1}/{total}) Fetching from {song['link']}")
         lyrics.append({**song, "lyrics": get_lyrics(song, args.source)})
 
     json.dump(lyrics, open(f"{args.source}.json", "w", encoding="utf8"), ensure_ascii=False)
