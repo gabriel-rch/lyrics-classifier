@@ -1,5 +1,6 @@
 import requests
 import bs4
+import time
 
 
 GENRE_URL = {
@@ -21,8 +22,24 @@ GENRE_URL = {
 }
 
 
+def make_request(url: str):
+    tries = 0
+    while True:
+        try:
+            response = requests.get(url)
+            if response.status_code != 200:
+                raise Exception(f"Failed to make request. Status code: {response.status_code}")
+            return response
+        except Exception:
+            time.sleep(5)
+            tries += 1
+            if tries == 5:
+                raise Exception("Failed to make request")
+            continue
+
+
 def get_songs(genre: str, limit: int):
-    response = requests.get(f"https://www.letras.mus.br/{GENRE_URL[genre]}/")
+    response = make_request(f"https://www.letras.mus.br/{GENRE_URL[genre]}/")
     soup = bs4.BeautifulSoup(response.text, "html.parser")
 
     songs_info = soup.find("ol", class_="top-list_mus --top")
@@ -41,7 +58,7 @@ def get_songs(genre: str, limit: int):
 
 def get_lyrics(song: dict):
     try:
-        response = requests.get(
+        response = make_request(
             f"https://www.letras.mus.br{song['link']}traducao.html", cookies={"translMode": "single"}
         )
     except Exception as e:
