@@ -26,7 +26,7 @@ def make_request(url: str):
     tries = 0
     while True:
         try:
-            response = requests.get(url)
+            response = requests.get(url, cookies={"translMode": "single"})
             if response.status_code != 200:
                 raise Exception(f"Failed to make request. Status code: {response.status_code}")
             return response
@@ -59,7 +59,7 @@ def get_songs(genre: str, limit: int):
 def get_lyrics(song: dict):
     try:
         response = make_request(
-            f"https://www.letras.mus.br{song['link']}traducao.html", cookies={"translMode": "single"}
+            f"https://www.letras.mus.br{song['link']}traducao.html"
         )
     except Exception as e:
         print(f"Failed to get lyrics for {song['title']} by {song['artist']}: {e}")
