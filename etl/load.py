@@ -16,5 +16,6 @@ feature_group = fs.get_or_create_feature_group(
     online_enabled=True,
 )
 
-df = pd.read_csv("lyrics.csv")
+df = pd.read_csv("lyrics.csv").fillna("")
+
 feature_group.insert(df, overwrite=True)
