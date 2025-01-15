@@ -124,30 +124,34 @@ def get_lyrics(song: dict):
     translated = original.replace(".html", "-traducao.html")
 
     response = make_request(translated)
-    if response.status_code == 404:
-        # Song has no translation or is already in Portuguese
-        # non-Portuguese songs may integrate the database right now,
-        # but these songs are removed in the next step
-        response = make_request(original)
-        soup = bs4.BeautifulSoup(response.text, "html.parser")
-        return soup.find("div", id="lyrics").get_text(separator=" ")
-
-    else:
+    if response.status_code != 404:
         # Song has a translation
         soup = bs4.BeautifulSoup(response.text, "html.parser")
 
-        lyrics_container = soup.find("div", id="lyricsPair")
-        translated_block = lyrics_container.find_all("div", class_="trad")
+        lyrics_pair = soup.find("div", id="lyricsPair")
+        if lyrics_pair:
+            # The song has the original lyrics and the translation side to side
+            translated_block = lyrics_pair.find_all("div", class_="trad")
+            return " ".join(
+                [
+                    " ".join(
+                        [
+                            line.strip()
+                            for line in block.find("p").get_text(separator="\n").split("\n")
+                            if line.strip()
+                        ]
+                    )
+                    for block in translated_block
+                ][1:] # Exclude song title
+            )
+        else:
+            #the translation is not side to side
+            return soup.find("div", id="lyrics").get_text(separator=" ")
+    
+    # Song has no translation or is already in Portuguese
+    # non-Portuguese songs may integrate the database right now,
+    # but these songs are removed in the next step
+    response = make_request(original)
+    soup = bs4.BeautifulSoup(response.text, "html.parser")
+    return soup.find("div", id="lyrics").get_text(separator=" ")
 
-        return " ".join(
-            [
-                " ".join(
-                    [
-                        line.strip()
-                        for line in block.find("p").get_text(separator="\n").split("\n")
-                        if line.strip()
-                    ]
-                )
-                for block in translated_block
-            ][1:] # Exclude song title
-        )
