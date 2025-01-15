@@ -13,6 +13,7 @@ def main():
 
     df = pd.DataFrame(data)
     df = df.drop(columns=["link"])
+    df["id"] = df.index
     df.to_csv("lyrics.csv", index=False)
 
 
