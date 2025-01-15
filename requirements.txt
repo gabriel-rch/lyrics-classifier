@@ -4,5 +4,6 @@ pandas
 python-dotenv
 confluent-kafka
 hopsworks
+pyarrow
 tqdm
 bs4
