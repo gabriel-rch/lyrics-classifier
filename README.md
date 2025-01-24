@@ -28,7 +28,7 @@ O tuning de hiperparâmetros é feito com Sweeps do Weights & Biases. O script d
 
 ### Model Deploy
 
-[WORK IN PROGRESS]
+O deploy do modelo é feito serializando a Pipeline Scikit-Learn que contém o pré-processamento, extração de características e modelo pré-treinado e posteriormente carregando para uso no servidor. O modelo é implantado em um Space do HuggingFace e uma demo está disponível para acesso público.
 
 ### Model Versioning & Monitoring
 
