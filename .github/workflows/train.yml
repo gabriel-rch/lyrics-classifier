@@ -12,6 +12,9 @@ jobs:
       - name: setup the python environment
         uses: ./.github/actions/python-setup
       - name: run the training script
+        env:
+          HOPSWORKS_KEY: ${{ secrets.HOPSWORKS_KEY }}
+          WANDB_KEY: ${{ secrets.WANDB_KEY }}
         run: python train.py
       - name: store pipeline
         uses: actions/upload-artifact@v4
