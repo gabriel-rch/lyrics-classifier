@@ -1,0 +1,20 @@
+name: Model Training
+on:
+  workflow_dispatch:
+
+jobs:
+  train:
+    name: train the model
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@v4.2.2
+      - name: setup the python environment
+        uses: ./.github/actions/python-setup
+      - name: run the training script
+        run: python train.py
+      - name: store pipeline
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline
+          path: pipeline.pkl
