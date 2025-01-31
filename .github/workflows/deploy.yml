@@ -15,7 +15,14 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+      - name: download pipeline artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pipeline
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://gabriel-rocha:$HF_TOKEN@huggingface.co/spaces/gabriel-rocha/lyrics-classifier main
+        run: |
+          git add pipeline.pkl
+          git commit -m "New trained pipeline"
+          git push https://gabriel-rocha:$HF_TOKEN@huggingface.co/spaces/gabriel-rocha/lyrics-classifier main
