@@ -7,3 +7,4 @@ hopsworks
 pyarrow
 tqdm
 bs4
+wandb
