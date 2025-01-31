@@ -8,3 +8,4 @@ pyarrow
 tqdm
 bs4
 wandb
+unidecode
